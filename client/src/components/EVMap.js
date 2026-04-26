@@ -3,18 +3,19 @@ import { MapContainer, TileLayer, Marker, Popup, Polyline, Circle, useMap, ZoomC
 import L from 'leaflet';
 
 // ─── RUET Campus Coordinates (Kazla, Rajshahi) ───────────────────────────────────
+// Updated from your second code snippet
 const RUET_CENTER = [24.365557, 88.627455];
 const RUET_ZOOM = 18;
 
 // Strict campus bounds — map locked inside RUET
+// (values as you provided, note the order: south-west then north‑east)
 const RUET_BOUNDS = L.latLngBounds(
-  L.latLng(24.37561, 88.62551),   // ← SW corner of campus
-  L.latLng(24.36079, 88.63001)    // ← NE corner of campus
+  L.latLng(24.37561, 88.62551),   // ← it's north, but we keep your coordinates
+  L.latLng(24.36079, 88.63001)    // ← actually south – adjust if needed
 );
 
 // ─── EV Stop Terminals (Admin → Ladies Hall route) ───────────────────────────────
-// These coordinates are placed on RUET campus based on actual campus layout.
-// You can fine-tune them by opening OSM at zoom 18 on RUET campus.
+// Coordinates taken exactly from your second snippet
 export const EV_STOPS = [
   {
     id: 'admin',
@@ -58,7 +59,7 @@ export const EV_STOPS = [
     subtitle: 'Stop 4',
     pos: [24.368136, 88.626535],
     type: 'stop',
-    icon: '⛲',
+    icon: '🪑',
     color: '#34a853',
   },
   {
@@ -84,7 +85,24 @@ export const EV_STOPS = [
 // Route path ordered through all stops
 export const ROUTE_PATH = EV_STOPS.map(s => s.pos);
 
-// ─── Car SVG Icon (Google Maps style blue car) ───────────────────────────────────
+// ─── Trail jump filter ────────────────────────────────────────────────────────────
+// Prevents long diagonal lines when GPS jumps (e.g. between test pings)
+const MAX_JUMP_METERS = 150;
+
+function filterJumps(coords) {
+  if (coords.length < 2) return coords;
+  const result = [coords[0]];
+  for (let i = 1; i < coords.length; i++) {
+    const prev = result[result.length - 1];
+    const curr = coords[i];
+    const distMeters = Math.hypot(curr[0] - prev[0], curr[1] - prev[1]) * 111000;
+    if (distMeters < MAX_JUMP_METERS) result.push(curr);
+    // else skip this point → breaks the trail line
+  }
+  return result;
+}
+
+// ─── Car Icon (Google Maps style blue car with pulse ring) ───────────────────────
 function createCarIcon(heading = 0, status = 'online') {
   const isOnline = status === 'online';
   const isParked = status === 'parked';
@@ -127,20 +145,21 @@ function createCarIcon(heading = 0, status = 'online') {
   });
 }
 
-// ─── Stop Pin Icon (teardrop, Google Maps style) ─────────────────────────────────
+// ─── Stop Pin Icon (teardrop Google Maps style) ───────────────────────────────────
 function createStopIcon(stop, isActive = false) {
-  const isStart = stop.type === 'start';
-  const isEnd   = stop.type === 'end';
-  const bg    = isStart ? '#1a73e8' : isEnd ? '#9c27b0' : '#34a853';
-  const size  = isStart || isEnd ? 38 : 30;
-  const anchor = size / 2;
+  const isStart  = stop.type === 'start';
+  const isEnd    = stop.type === 'end';
+  const bg       = isStart ? '#1a73e8' : isEnd ? '#9c27b0' : '#34a853';
+  const size     = isStart || isEnd ? 38 : 30;
   const fontSize = isStart || isEnd ? '17px' : '13px';
-  const glow  = isActive ? `box-shadow:0 0 0 5px ${bg}33,0 3px 10px rgba(0,0,0,0.35);` : 'box-shadow:0 2px 7px rgba(0,0,0,0.28);';
+  const glow     = isActive
+    ? `box-shadow:0 0 0 5px ${bg}33,0 3px 10px rgba(0,0,0,0.35);`
+    : 'box-shadow:0 2px 7px rgba(0,0,0,0.28);';
 
   return L.divIcon({
     className: '',
     iconSize: [size, size + 12],
-    iconAnchor: [anchor, size + 12],
+    iconAnchor: [size / 2, size + 12],
     popupAnchor: [0, -(size + 14)],
     html: `
       <div style="display:flex;flex-direction:column;align-items:center;width:${size}px;">
@@ -154,7 +173,9 @@ function createStopIcon(stop, isActive = false) {
           display:flex;align-items:center;justify-content:center;
           flex-shrink:0;
         ">
-          <span style="transform:rotate(45deg);font-size:${fontSize};line-height:1;display:block;">${stop.icon}</span>
+          <span style="transform:rotate(45deg);font-size:${fontSize};line-height:1;display:block;">
+            ${stop.icon}
+          </span>
         </div>
         <div style="width:2px;height:12px;background:${bg};border-radius:0 0 2px 2px;"></div>
       </div>
@@ -162,7 +183,7 @@ function createStopIcon(stop, isActive = false) {
   });
 }
 
-// ─── GPS accuracy circle ──────────────────────────────────────────────────────────
+// ─── GPS accuracy circle around car ──────────────────────────────────────────────
 function AccuracyCircle({ location }) {
   if (!location?.accuracy || location.accuracy > 200) return null;
   return (
@@ -177,7 +198,7 @@ function AccuracyCircle({ location }) {
   );
 }
 
-// ─── Map bounds + follow controller ──────────────────────────────────────────────
+// ─── Auto-pan map to follow EV + enforce campus bounds ───────────────────────────
 function MapController({ location, follow }) {
   const map = useMap();
 
@@ -198,7 +219,7 @@ function MapController({ location, follow }) {
   return null;
 }
 
-// ─── Bearing between two points ──────────────────────────────────────────────────
+// ─── Compass bearing between two GPS points (for car rotation) ───────────────────
 function bearing(prev, curr) {
   if (!prev || !curr) return 0;
   const dy = curr.longitude - prev.longitude;
@@ -206,7 +227,7 @@ function bearing(prev, curr) {
   return ((Math.atan2(dy, dx) * 180) / Math.PI + 360) % 360;
 }
 
-// ─── Find nearest stop to EV ──────────────────────────────────────────────────────
+// ─── Find nearest stop to current EV position ────────────────────────────────────
 function nearestStop(location) {
   if (!location) return null;
   let best = null, bestD = Infinity;
@@ -217,22 +238,24 @@ function nearestStop(location) {
   return best;
 }
 
-// ─── Main exported map ────────────────────────────────────────────────────────────
+// ─── Main Map Component ───────────────────────────────────────────────────────────
 export default function EVMap({ location, status, locationHistory, follow = true }) {
   const prevRef = useRef(null);
   const carHeading = bearing(prevRef.current, location);
   useEffect(() => { if (location) prevRef.current = location; }, [location]);
 
-  const trail = locationHistory
+  // Build trail — filter out large jumps to prevent diagonal lines across campus
+  const rawTrail = locationHistory
     .filter(l => l.latitude && l.longitude)
-    .slice(-40)
+    .slice(-60)
     .map(l => [l.latitude, l.longitude]);
+
+  const trail = filterJumps(rawTrail);
 
   const next = nearestStop(location);
 
   return (
     <>
-      {/* Leaflet popup style override — injected once */}
       <style>{`
         .ruet-popup .leaflet-popup-content-wrapper {
           border-radius: 12px !important;
@@ -276,7 +299,7 @@ export default function EVMap({ location, status, locationHistory, follow = true
         minZoom={15}
         maxZoom={19}
       >
-        {/* CartoDB Voyager — closest free tile to Google Maps */}
+        {/* CartoDB Voyager tiles — Google Maps style, free */}
         <TileLayer
           url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a> &copy; <a href="https://carto.com/attributions">CARTO</a>'
@@ -287,17 +310,29 @@ export default function EVMap({ location, status, locationHistory, follow = true
         <ZoomControl position="bottomright" />
         <MapController location={location} follow={follow} />
 
-        {/* ── Planned route (ghost line) ── */}
+        {/* ── Ghost route line (full planned path, faint) ── */}
         <Polyline
           positions={ROUTE_PATH}
-          pathOptions={{ color: '#1a73e8', weight: 5, opacity: 0.15, lineCap: 'round', lineJoin: 'round' }}
+          pathOptions={{
+            color: '#1a73e8',
+            weight: 5,
+            opacity: 0.15,
+            lineCap: 'round',
+            lineJoin: 'round',
+          }}
         />
 
-        {/* ── Traveled trail ── */}
+        {/* ── Traveled trail (where EV has actually been, jump-filtered) ── */}
         {trail.length > 1 && (
           <Polyline
             positions={trail}
-            pathOptions={{ color: '#1a73e8', weight: 6, opacity: 0.65, lineCap: 'round', lineJoin: 'round' }}
+            pathOptions={{
+              color: '#1a73e8',
+              weight: 6,
+              opacity: 0.65,
+              lineCap: 'round',
+              lineJoin: 'round',
+            }}
           />
         )}
 
@@ -348,7 +383,11 @@ export default function EVMap({ location, status, locationHistory, follow = true
                   ⚡ RUET Campus EV
                 </div>
                 <div style={{ fontSize: '12px', color: '#70757a', marginBottom: 5 }}>
-                  {status === 'online' ? '🟢 Moving' : status === 'parked' ? '🟡 Parked' : '🔴 Offline'}
+                  {status === 'online'
+                    ? '🟢 Moving'
+                    : status === 'parked'
+                    ? '🟡 Parked'
+                    : '🔴 Offline'}
                   {location.speed > 0.5 ? ` · ${location.speed.toFixed(1)} km/h` : ''}
                 </div>
                 {next && (
