@@ -23,7 +23,7 @@ export const EV_STOPS = [
     subtitle: 'Start Terminal',
     pos: [24.363772, 88.628544],
     type: 'start',
-    icon: '🏛️',
+    icon: '🏨',
     color: '#1a73e8',
   },
   {
@@ -39,7 +39,7 @@ export const EV_STOPS = [
     id: 'library',
     name: 'RUET Library',
     subtitle: 'Stop 2',
-    pos: [24.365839, 88.627339],
+    pos: [24.365578, 88.627908],
     type: 'stop',
     icon: '📚',
     color: '#34a853',
