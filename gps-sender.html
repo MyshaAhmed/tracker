@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>RUET EV GPS Sender</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: #0a0f1e;
+      color: #e8f0fe;
+      font-family: 'Courier New', monospace;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    .card {
+      background: #111827;
+      border: 1px solid #1e3158;
+      border-radius: 16px;
+      padding: 28px;
+      width: 100%;
+      max-width: 360px;
+      text-align: center;
+    }
+    h1 { font-size: 20px; color: #00e5a0; margin-bottom: 4px; }
+    .sub { font-size: 11px; color: #8899bb; letter-spacing: 0.08em; margin-bottom: 24px; }
+
+    .status-circle {
+      width: 80px; height: 80px;
+      border-radius: 50%;
+      background: #1a2742;
+      border: 3px solid #1e3158;
+      display: flex; align-items: center; justify-content: center;
+      margin: 0 auto 20px;
+      font-size: 30px;
+      transition: all 0.3s;
+    }
+    .status-circle.sending {
+      border-color: #00e5a0;
+      box-shadow: 0 0 20px rgba(0,229,160,0.3);
+      animation: pulse 1.5s ease-in-out infinite;
+    }
+    .status-circle.error { border-color: #ff4d6d; }
+
+    @keyframes pulse {
+      0%, 100% { box-shadow: 0 0 20px rgba(0,229,160,0.3); }
+      50% { box-shadow: 0 0 40px rgba(0,229,160,0.6); }
+    }
+
+    .coords {
+      font-size: 11px;
+      color: #8899bb;
+      margin-bottom: 6px;
+      line-height: 1.8;
+    }
+    .coords span { color: #e8f0fe; font-weight: bold; }
+
+    .msg {
+      font-size: 12px;
+      padding: 8px 12px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+      min-height: 36px;
+    }
+    .msg.ok { background: rgba(0,229,160,0.1); color: #00e5a0; border: 1px solid rgba(0,229,160,0.2); }
+    .msg.err { background: rgba(255,77,109,0.1); color: #ff4d6d; border: 1px solid rgba(255,77,109,0.2); }
+    .msg.info { background: rgba(79,172,254,0.1); color: #4facfe; border: 1px solid rgba(79,172,254,0.2); }
+
+    button {
+      width: 100%;
+      padding: 14px;
+      border-radius: 12px;
+      border: none;
+      font-family: 'Courier New', monospace;
+      font-size: 14px;
+      font-weight: bold;
+      letter-spacing: 0.06em;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    #startBtn {
+      background: linear-gradient(135deg, #00e5a0, #00b8d9);
+      color: #0a0f1e;
+    }
+    #stopBtn {
+      background: rgba(255,77,109,0.15);
+      color: #ff4d6d;
+      border: 1px solid rgba(255,77,109,0.3);
+      margin-top: 10px;
+      display: none;
+    }
+
+    .server-input {
+      width: 100%;
+      background: #0a0f1e;
+      border: 1px solid #1e3158;
+      border-radius: 8px;
+      padding: 10px 12px;
+      color: #e8f0fe;
+      font-family: 'Courier New', monospace;
+      font-size: 12px;
+      margin-bottom: 10px;
+      outline: none;
+    }
+    .server-input:focus { border-color: #00e5a0; }
+    label { font-size: 11px; color: #8899bb; display: block; text-align: left; margin-bottom: 4px; }
+    .count { font-size: 11px; color: #8899bb; margin-top: 10px; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>⚡ RUET EV GPS</h1>
+    <div class="sub">SENDER · KEEP THIS PAGE OPEN</div>
+
+    <div class="status-circle" id="circle">📍</div>
+
+    <div class="coords" id="coordsDisplay">
+      LAT: <span id="latVal">—</span><br>
+      LNG: <span id="lngVal">—</span><br>
+      SPD: <span id="spdVal">—</span> km/h
+    </div>
+
+    <div class="msg info" id="statusMsg">Press START to begin sending location</div>
+
+    <label>Server URL</label>
+    <input type="text" class="server-input" id="serverUrl"
+      value="http://YOUR_SERVER_IP:5000/api/location"
+      placeholder="http://192.168.x.x:5000/api/location" />
+
+    <label>Secret Key</label>
+    <input type="text" class="server-input" id="secretKey"
+      value="ruet_ev_secret_2024" />
+
+    <button id="startBtn" onclick="startTracking()">▶ START TRACKING</button>
+    <button id="stopBtn" onclick="stopTracking()">⏹ STOP</button>
+
+    <div class="count" id="countDisplay">Sent: 0 updates</div>
+  </div>
+
+  <script>
+    let watchId = null;
+    let sendInterval = null;
+    let lastPos = null;
+    let sendCount = 0;
+
+    function startTracking() {
+      if (!navigator.geolocation) {
+        showMsg('GPS not supported on this device', 'err');
+        return;
+      }
+
+      document.getElementById('startBtn').style.display = 'none';
+      document.getElementById('stopBtn').style.display = 'block';
+      showMsg('Getting GPS signal...', 'info');
+
+      // Watch position continuously
+      watchId = navigator.geolocation.watchPosition(
+        (pos) => {
+          lastPos = pos;
+          document.getElementById('latVal').textContent = pos.coords.latitude.toFixed(6);
+          document.getElementById('lngVal').textContent = pos.coords.longitude.toFixed(6);
+          const spd = pos.coords.speed ? (pos.coords.speed * 3.6).toFixed(1) : '0.0';
+          document.getElementById('spdVal').textContent = spd;
+        },
+        (err) => {
+          showMsg('GPS error: ' + err.message, 'err');
+          document.getElementById('circle').className = 'status-circle error';
+          document.getElementById('circle').textContent = '❌';
+        },
+        { enableHighAccuracy: true, maximumAge: 0, timeout: 10000 }
+      );
+
+      // Send to server every 5 seconds
+      sendInterval = setInterval(sendLocation, 5000);
+    }
+
+    function stopTracking() {
+      if (watchId) navigator.geolocation.clearWatch(watchId);
+      if (sendInterval) clearInterval(sendInterval);
+      watchId = null; sendInterval = null;
+      document.getElementById('startBtn').style.display = 'block';
+      document.getElementById('stopBtn').style.display = 'none';
+      document.getElementById('circle').className = 'status-circle';
+      document.getElementById('circle').textContent = '📍';
+      showMsg('Tracking stopped.', 'info');
+    }
+
+    async function sendLocation() {
+      if (!lastPos) return;
+
+      const serverUrl = document.getElementById('serverUrl').value.trim();
+      const secretKey = document.getElementById('secretKey').value.trim();
+      const spd = lastPos.coords.speed ? lastPos.coords.speed * 3.6 : 0;
+
+      try {
+        const res = await fetch(serverUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-gps-key': secretKey,
+          },
+          body: JSON.stringify({
+            latitude: lastPos.coords.latitude,
+            longitude: lastPos.coords.longitude,
+            speed: spd.toFixed(2),
+          }),
+        });
+
+        if (res.ok) {
+          sendCount++;
+          document.getElementById('circle').className = 'status-circle sending';
+          document.getElementById('circle').textContent = '📡';
+          document.getElementById('countDisplay').textContent = `Sent: ${sendCount} updates`;
+          showMsg('✓ Location sent to server', 'ok');
+        } else {
+          showMsg('Server error: ' + res.status, 'err');
+        }
+      } catch (e) {
+        showMsg('Cannot reach server. Check URL.', 'err');
+        document.getElementById('circle').className = 'status-circle error';
+      }
+    }
+
+    function showMsg(text, type) {
+      const el = document.getElementById('statusMsg');
+      el.textContent = text;
+      el.className = 'msg ' + type;
+    }
+
+    // Keep screen awake (where supported)
+    if ('wakeLock' in navigator) {
+      navigator.wakeLock.request('screen').catch(() => {});
+    }
+  </script>
+</body>
+</html>

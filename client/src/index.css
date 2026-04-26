@@ -1,0 +1,25 @@
+/* Reset */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body, #root {
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+  font-family: 'Google Sans', 'Segoe UI', system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Leaflet image fix */
+.leaflet-default-icon-path { background-image: none; }
+
+/* Leaflet popup base */
+.leaflet-popup-content-wrapper {
+  border-radius: 12px !important;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.15) !important;
+}
+.leaflet-popup-tip-container { display: none; }
+
+/* Hide leaflet attribution on small screens */
+@media (max-width: 400px) {
+  .leaflet-control-attribution { display: none !important; }
+}
