@@ -11,14 +11,17 @@ export function useEVTracker() {
   const socketRef = useRef(null);
 
   useEffect(() => {
-    // Fetch initial latest location via REST
-    fetch('/api/location/latest')
+    // ✅ IMPORTANT: Use the same base URL for REST calls
+    const baseUrl = SOCKET_URL;
+    
+    // Fetch initial latest location using the backend URL
+    fetch(`${baseUrl}/api/location/latest`)
       .then(r => r.json())
       .then(data => {
         if (data.location) setLocation(data.location);
         setStatus(data.status);
       })
-      .catch(() => {});
+      .catch((err) => console.error('Failed to fetch initial location:', err));
 
     // Connect socket
     socketRef.current = io(SOCKET_URL, { transports: ['websocket', 'polling'] });
@@ -36,7 +39,7 @@ export function useEVTracker() {
       setLocation(loc);
       setLocationHistory(prev => {
         const next = [...prev, loc];
-        return next.slice(-50); // keep last 50 points for trail
+        return next.slice(-50);
       });
     });
 
