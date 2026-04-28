@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef } from 'react';
 import { io } from 'socket.io-client';
 
-const SOCKET_URL = process.env.REACT_APP_SERVER_URL || 'http://localhost:5000';
+const SOCKET_URL = process.env.REACT_APP_SERVER_URL || 'https://ruet-ev-tracker.onrender.com';
 
 export function useEVTracker() {
   const [location, setLocation] = useState(null);
