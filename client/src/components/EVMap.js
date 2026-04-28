@@ -23,7 +23,7 @@ export const EV_STOPS = [
     subtitle: 'Start Terminal',
     pos: [24.363772, 88.628544],
     type: 'start',
-    icon: '🏨',
+    icon: '🏫',
     color: '#1a73e8',
   },
   {
