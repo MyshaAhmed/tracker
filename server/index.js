@@ -93,6 +93,41 @@ app.post('/api/location', async (req, res) => {
   res.json({ success: true, location: latestLocation });
 });
 
+// OwnTracks app format
+app.post('/api/owntracks', async (req, res) => {
+  const auth = req.headers['authorization'];
+  const expected = 'Basic ' + Buffer.from('ruet:ruet_ev_secret_2024').toString('base64');
+  if (auth !== expected) return res.status(401).json({ error: 'Unauthorized' });
+
+  // ✅ ADDED: Log the incoming request body so you can see it in the terminal
+  console.log('📍 OwnTracks received:', req.body);
+
+  const { lat, lon, vel } = req.body;
+  if (!lat || !lon) return res.status(400).json({ error: 'Missing lat/lon' });
+
+  const location = new Location({
+    latitude: lat,
+    longitude: lon,
+    speed: vel || 0,
+  });
+  await location.save();
+
+  const locData = {
+    latitude: lat,
+    longitude: lon,
+    speed: vel || 0,
+    timestamp: new Date(),
+    inCampus: true,
+  };
+
+  latestLocation = locData;
+  resetOfflineTimer();
+  io.emit('location_update', locData);
+  io.emit('ev_status', { status: 'online' });
+
+  res.json({ _type: 'cmd', action: 'reportLocation' });
+});
+
 // [GET] /api/location/latest — Get the most recent location
 app.get('/api/location/latest', (req, res) => {
   if (!latestLocation) {
