@@ -99,7 +99,7 @@ app.post('/api/owntracks', async (req, res) => {
   const expected = 'Basic ' + Buffer.from('ruet:ruet_ev_secret_2024').toString('base64');
   if (auth !== expected) return res.status(401).json({ error: 'Unauthorized' });
 
-  // ✅ ADDED: Log the incoming request body so you can see it in the terminal
+  //  ADDED: Log the incoming request body to see it in the terminal
   console.log('📍 OwnTracks received:', req.body);
 
   const { lat, lon, vel } = req.body;
