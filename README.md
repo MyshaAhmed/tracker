@@ -1,6 +1,6 @@
 # ⚡ RUET EV Tracker
 
-A real-time Electric Vehicle location tracker for RUET (Rajshahi University of Engineering & Technology) campus, built so that female engineering students can see exactly where the campus EV is before walking out to wait for it.
+A real-time Electric Vehicle(EV) tracking system within the RUET campus, designed to help female engineering students see the exact location of the campus EV before stepping out, and know precisely how long they’ll need to wait.
 
 🔗 **Live Site: [ruet-ev-tracker.netlify.app](https://ruet-ev-tracker.netlify.app)**
 
@@ -9,7 +9,7 @@ A real-time Electric Vehicle location tracker for RUET (Rajshahi University of E
 ## 🚌 The Story
 
 RUET's Department of Mechanical Engineering launched a campus EV to help female students commute between Ladies Hall and the Admin Building. 
-The problem? Nobody knew where it was at any given moment. You'd just walk out and hope it was nearby.
+But here's the thing, every morning, we'd just... stand there. Waiting. Not knowing if the EV just left, is 2 minutes away, or hasn't even started yet.
 
 ---
 
@@ -17,7 +17,7 @@ The problem? Nobody knew where it was at any given moment. You'd just walk out a
 
 > Real RUET campus streets · Live car icon · 7 stop terminals · Google Maps-style interface
 
-The EV is tracked live using an Android phone running GPSLogger mounted inside the vehicle. Students open the website on any phone browser and see real time location of the EV.
+The EV is tracked live using an Android phone running GPSLogger mounted inside the vehicle. Students can open the website on any phone browser and see real time location of the EV.
 
 ---
 
@@ -96,8 +96,8 @@ The EV runs a fixed route with 7 terminals:
 
 ## 🙏 Acknowledgements
 
-- My friend ** Tabassum Hafsa** for the initial idea
-- Department of Mechanical Engineering, RUET for launching the campus EV initiative
+- My friend Tabassum Hafsa for the initial idea
+- Department of Mechanical Engineering, RUET for launching the campus EV initiative [প্রথম আলো](https://www.prothomalo.com/bangladesh/district/avk8vu5hev?utm_id=97757_v0_s00_e224_tv2_tp1_a1den5eqbeyvzb&fbclid=IwY2xjawRnAUhleHRuA2FlbQIxMABicmlkETFHWVczbExzSjlubWJINnNmc3J0YwZhcHBfaWQQMjIyMDM5MTc4ODIwMDg5MgABHp5a0usl7wWM28uSG5j14B_-wz-nL8JpBsm7VpsgV17rk3g-muhI8A8Z3-0H_aem_Fy2emGjd4MZcKBpjusO5rw) 
 - [OpenStreetMap](https://www.openstreetmap.org) contributors for map data
 - [GPSLogger](https://github.com/mendhak/gpslogger) for the lightweight GPS tracking app
 
